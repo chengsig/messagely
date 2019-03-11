@@ -1,6 +1,6 @@
 /** User class for message.ly */
 const bcrypt = require('bcrypt');
-const client = require('../db');
+const db = require('../db');
 
 
 /** User of the site. */
@@ -11,20 +11,31 @@ class User {
    *    {username, password, first_name, last_name, phone}
    */
 
-  static async register({username, password, first_name, last_name, phone}) {
+  static async register({ username, password, first_name, last_name, phone }) {
     const hashedPassword = await bcrypt.hash(password, 12);
-    const result = await client.query(
+    const result = await db.query(
       `INSERT INTO users (username, password, first_name, last_name, phone)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING username, password, first_name, last_name, phone`, 
-        [username, hashedPassword, first_name, last_name, phone]
+        RETURNING username, password, first_name, last_name, phone`,
+      [username, hashedPassword, first_name, last_name, phone]
     );
-    return { result };
+    return result.rows[0];
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
-  static async authenticate(username, password) { }
+  static async authenticate(username, password) {
+    const result = await db.query(
+      `SELECT password FROM users WHERE username = $1`,
+      [username]);
+    const user = result.rows[0];
+
+    if (user) {
+      return await bcrypt.compare(password, user.password)
+    }
+    return false;   
+  }
+    
 
   /** Update last_login_at for user */
 
